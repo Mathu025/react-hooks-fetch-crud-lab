@@ -11,6 +11,14 @@ function QuestionItem({ question, onDelete, onUpdate }) {
 
   function handleCorrectAnswerChange(e) {
     const updatedIndex = parseInt(e.target.value);
+    
+    // Create the optimistically updated question
+    const updatedQuestion = { ...question, correctIndex: updatedIndex };
+    
+    // Update UI immediately (optimistic update)
+    onUpdate(updatedQuestion);
+    
+    // Then sync with server
     fetch(`http://localhost:4000/questions/${id}`, {
       method: "PATCH",
       headers: {
@@ -19,7 +27,17 @@ function QuestionItem({ question, onDelete, onUpdate }) {
       body: JSON.stringify({ correctIndex: updatedIndex }),
     })
       .then((r) => r.json())
-      .then((updatedQuestion) => onUpdate(updatedQuestion)); // ✅ FIXED: pass updated question to App
+      .then((serverResponse) => {
+        // Only update again if server response differs from our optimistic update
+        if (serverResponse.correctIndex !== updatedIndex) {
+          onUpdate(serverResponse);
+        }
+      })
+      .catch((error) => {
+        // Revert to original state if server request fails
+        console.error("Failed to update question:", error);
+        onUpdate(question); // revert to original
+      });
   }
 
   return (
