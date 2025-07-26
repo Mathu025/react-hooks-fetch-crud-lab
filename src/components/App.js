@@ -7,26 +7,9 @@ function App() {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    let isMounted = true; // Track if component is mounted
-    
     fetch("http://localhost:4000/questions")
       .then((r) => r.json())
-      .then((data) => {
-        if (isMounted) { // Only update state if component is still mounted
-          setQuestions(data);
-        }
-      })
-      .catch((error) => {
-        if (isMounted) {
-          console.error("Failed to fetch questions:", error);
-          setQuestions([]);
-        }
-      });
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-    };
+      .then((data) => setQuestions(data));
   }, []);
 
   function handleAddQuestion(newQuestion) {
@@ -35,15 +18,13 @@ function App() {
   }
 
   function handleDeleteQuestion(id) {
-    const updatedQuestions = questions.filter((q) => q.id !== id);
-    setQuestions(updatedQuestions);
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
   }
 
   function handleUpdateAnswer(updatedQuestion) {
-    const updated = questions.map((q) =>
-      q.id === updatedQuestion.id ? updatedQuestion : q
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q))
     );
-    setQuestions(updated);
   }
 
   return (
