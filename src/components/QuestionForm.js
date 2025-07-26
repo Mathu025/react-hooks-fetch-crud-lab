@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 function QuestionForm({ onAddQuestion }) {
   const [formData, setFormData] = useState({
@@ -6,6 +6,14 @@ function QuestionForm({ onAddQuestion }) {
     answers: ["", "", "", ""],
     correctIndex: 0,
   });
+  
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -15,6 +23,8 @@ function QuestionForm({ onAddQuestion }) {
       const updatedAnswers = [...formData.answers];
       updatedAnswers[index] = value;
       setFormData({ ...formData, answers: updatedAnswers });
+    } else if (name === "correctIndex") {
+      setFormData({ ...formData, correctIndex: parseInt(value) });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -23,19 +33,44 @@ function QuestionForm({ onAddQuestion }) {
   function handleSubmit(e) {
     e.preventDefault();
 
+    const questionData = {
+      prompt: formData.prompt,
+      answers: formData.answers,
+      correctIndex: parseInt(formData.correctIndex),
+    };
+
     fetch("http://localhost:4000/questions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        prompt: formData.prompt,
-        answers: formData.answers,
-        correctIndex: parseInt(formData.correctIndex),
-      }),
+      body: JSON.stringify(questionData),
     })
-      .then((r) => r.json())
-      .then(onAddQuestion);
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return r.json();
+      })
+      .then((newQuestion) => {
+        // Only update state if component is still mounted
+        if (isMountedRef.current) {
+          // Reset form after successful submission
+          setFormData({
+            prompt: "",
+            answers: ["", "", "", ""],
+            correctIndex: 0,
+          });
+        }
+        
+        // Call the callback with the new question (this is safe even if unmounted)
+        if (onAddQuestion) {
+          onAddQuestion(newQuestion);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to add question:", error);
+      });
   }
 
   return (
@@ -62,10 +97,9 @@ function QuestionForm({ onAddQuestion }) {
             />
           </label>
         ))}
-        <label htmlFor="correctIndex">
-          Correct Answer (Form):
+        <label>
+          Correct Answer:
           <select
-            id="correctIndex"
             name="correctIndex"
             value={formData.correctIndex}
             onChange={handleChange}

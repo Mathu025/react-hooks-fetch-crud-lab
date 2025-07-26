@@ -7,9 +7,26 @@ function App() {
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
+    let isMounted = true; // Track if component is mounted
+    
     fetch("http://localhost:4000/questions")
       .then((r) => r.json())
-      .then((data) => setQuestions(data));
+      .then((data) => {
+        if (isMounted) { // Only update state if component is still mounted
+          setQuestions(data);
+        }
+      })
+      .catch((error) => {
+        if (isMounted) {
+          console.error("Failed to fetch questions:", error);
+          setQuestions([]);
+        }
+      });
+
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function handleAddQuestion(newQuestion) {
@@ -48,4 +65,3 @@ function App() {
 }
 
 export default App;
-

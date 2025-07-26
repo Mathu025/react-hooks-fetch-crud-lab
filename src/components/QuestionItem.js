@@ -6,16 +6,23 @@ function QuestionItem({ question, onDelete, onUpdate }) {
   function handleDeleteClick() {
     fetch(`http://localhost:4000/questions/${id}`, {
       method: "DELETE",
-    }).then(() => onDelete(id));
+    })
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return onDelete(id);
+      })
+      .catch((error) => {
+        console.error("Failed to delete question:", error);
+      });
   }
 
   function handleCorrectAnswerChange(e) {
     const updatedIndex = parseInt(e.target.value);
     
-    // Create the optimistically updated question
+    // Update UI immediately (optimistic update) 
     const updatedQuestion = { ...question, correctIndex: updatedIndex };
-    
-    // Update UI immediately (optimistic update)
     onUpdate(updatedQuestion);
     
     // Then sync with server
@@ -26,7 +33,12 @@ function QuestionItem({ question, onDelete, onUpdate }) {
       },
       body: JSON.stringify({ correctIndex: updatedIndex }),
     })
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return r.json();
+      })
       .then((serverResponse) => {
         // Only update again if server response differs from our optimistic update
         if (serverResponse.correctIndex !== updatedIndex) {
@@ -34,9 +46,9 @@ function QuestionItem({ question, onDelete, onUpdate }) {
         }
       })
       .catch((error) => {
-        // Revert to original state if server request fails
         console.error("Failed to update question:", error);
-        onUpdate(question); // revert to original
+        // Revert to original state if server request fails
+        onUpdate(question);
       });
   }
 
