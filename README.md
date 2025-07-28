@@ -1,6 +1,6 @@
 # Putting it All Together: React Fetch CRUD Lab
 
-## Learning Goals
+### Learning Goals
 
 - Use the `useEffect` hook to fetch data from an API
 - Use event handlers with `fetch` to send data to an API
